@@ -2,6 +2,8 @@
 
 Web frontend for running [Universal Pokemon Randomizer FVX](https://github.com/upr-fvx/universal-pokemon-randomizer-fvx) through its Java CLI. This project was created entirely with OpenAI Codex.
 
+![UPR-FVX Web screenshot](docs/screenshot.png)
+
 ## Requirements
 
 - Node.js 22+
