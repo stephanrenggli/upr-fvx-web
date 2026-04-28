@@ -1,0 +1,29 @@
+{
+  "name": "upr-fvx-web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node --watch server/index.js",
+    "build:fvx": "sh scripts/build-fvx.sh",
+    "build:bridge": "rm -rf bridge/classes bridge/dist && mkdir -p bridge/classes bridge/dist && javac -cp vendor/UPR-FVX.jar -d bridge/classes bridge/src/dev/uprweb/SettingsBridge.java && jar --create --file bridge/dist/settings-bridge.jar -C bridge/classes .",
+    "build:local": "npm run build:fvx && npm run build:bridge",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "check": "node --check server/index.js && node --check server/randomizer.js && node --check server/settingsBridge.js && vite build"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "express": "^5.1.0",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "concurrently": "^9.2.1",
+    "svelte": "^5.55.5",
+    "vite": "^8.0.10"
+  }
+}

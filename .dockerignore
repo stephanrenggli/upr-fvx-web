@@ -1,0 +1,10 @@
+node_modules
+dist
+tmp
+.git
+.env
+vendor/*.jar
+vendor/java
+bridge/classes
+bridge/dist
+npm-debug.log
