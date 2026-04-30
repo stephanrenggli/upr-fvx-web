@@ -35,6 +35,21 @@ const upload = multer({
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+
+  req.requestId = requestId;
+  res.setHeader("X-Request-Id", requestId);
+
+  res.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    console.info(`[${requestId}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)`);
+  });
+
+  next();
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
@@ -69,13 +84,21 @@ app.post("/api/randomize", upload.single("rom"), async (req, res, next) => {
       seed: req.body.seed
     });
 
+    const settingsString = req.body.settingsString.trim();
+    console.info(
+      `[${req.requestId}] randomize request accepted for ${req.file.originalname}; saveLog=${saveLog}; seedProvided=${Boolean(
+        req.body.seed?.trim()
+      )}; settingsString=${JSON.stringify(settingsString)}`
+    );
+
     const result = await randomizeRom({
       file: req.file,
-      settingsString: req.body.settingsString,
+      settingsString,
       seed: req.body.seed,
       saveLog
     });
 
+    console.info(`[${req.requestId}] randomize request completed with ${result.filename}`);
     res.setHeader("Content-Type", result.contentType);
     res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
     res.send(result.body);
@@ -101,11 +124,14 @@ app.use((error, _req, res, _next) => {
   }
 
   if (error instanceof HttpError) {
+    if (error.status >= 500) {
+      console.error(`[${_req.requestId ?? "unknown"}] ${error.message}`, error.cause ?? error);
+    }
     res.status(error.status).json({ error: error.message });
     return;
   }
 
-  console.error(error);
+  console.error(`[${_req.requestId ?? "unknown"}] unexpected server error`, error);
   res.status(500).json({ error: "Unexpected server error." });
 });
 

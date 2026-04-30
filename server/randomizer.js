@@ -39,9 +39,14 @@ export async function randomizeRom({ file, settingsString, seed, saveLog }) {
   validateRandomizeRequest({ file, settingsString, seed });
   await assertRuntimeAvailable();
 
+  const startedAt = Date.now();
+  const romName = file.originalname;
   const workDir = path.dirname(file.path);
   const inputPath = file.path;
   const outputBase = path.join(workDir, outputFileName(file.originalname));
+  console.info(
+    `Starting FVX randomization for ${romName}; saveLog=${saveLog}; seedProvided=${Boolean(seed?.trim())}`
+  );
 
   try {
     const cliResult = await runRandomizer({
@@ -69,8 +74,12 @@ export async function randomizeRom({ file, settingsString, seed, saveLog }) {
       contentType: "application/octet-stream",
       filename: path.basename(outputPath)
     };
+  } catch (error) {
+    console.error(`FVX randomization failed for ${romName}`, error);
+    throw error;
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
+    console.info(`Finished FVX randomization for ${romName} in ${Date.now() - startedAt}ms`);
   }
 }
 
@@ -124,6 +133,7 @@ function runRandomizer({ inputPath, outputBase, settingsString, seed, saveLog })
     child.on("error", (error) => {
       randomizerChildren.delete(child);
       clearTimeout(timeout);
+      console.error("Could not start Java runtime for FVX randomization", error);
       reject(new HttpError(500, `Could not start Java runtime: ${error.message}`, error));
     });
 
@@ -132,11 +142,13 @@ function runRandomizer({ inputPath, outputBase, settingsString, seed, saveLog })
       clearTimeout(timeout);
 
       if (didTimeout) {
+        console.error("FVX randomizer timed out");
         reject(new HttpError(504, "Randomization timed out. Try a smaller ROM or increase RANDOMIZER_TIMEOUT_MS."));
         return;
       }
 
       if (code !== 0) {
+        console.error(`FVX randomizer exited with code ${code}`);
         reject(new HttpError(500, summarizeCliFailure(stdout, stderr, code)));
         return;
       }
